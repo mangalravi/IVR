@@ -15,8 +15,7 @@ const UploadExcel = () => {
 				<input type="text" class="form-control validationname" placeholder="Full Name" aria-label="Full Name" aria-describedby="basic-addon1" />
 			</div>
 		<div class="col-sm-6 col-md-5">
-						@* <input type="file" class="form-control" asp-for="ATTACHMENT" /> * /@
-			<div class="mainfileupload position-relative">
+				<div class="mainfileupload position-relative">
 			<div class='file-input'>
 				<input type='file' class="form-control" asp-for="ATTACHMENT" />
 				<span class='button'>Browse</span>
