@@ -1,0 +1,259 @@
+USE HR_INVENTIVE
+GO
+
+EXEC hr.sp_generatemonthlyattendance 8,2024,1443
+GO
+UPDATE HR.PR_MONTHLY_SALARY  SET ISFREEZE = 1 
+WHERE SALARYYEAR = 2024 AND SALARYMONTH = 8
+GO
+SELECT ISFREEZE, * FROM HR.PR_MONTHLY_SALARY 
+WHERE SALARYYEAR = 2024 AND SALARYMONTH = 8
+GO
+SELECT COUNT(*) FROM HR.PR_MONTHLY_SALARY 
+WHERE SALARYYEAR = 2024 AND SALARYMONTH = 8
+GO
+
+
+USE HR_INVENTIVE
+GO
+
+
+IF OBJECT_ID('TEMPDB..#TEMP_CHECKIN') IS NOT NULL
+BEGIN
+	DROP TABLE #TEMP_CHECKIN;
+	CREATE TABLE #temp_checkin(Emp_Id int,Loc_Name varchar(500), CheckIn_Date DATE, Prj_Id VARCHAR(4000),MULTIPLE_PRJ CHAR(10),Mode varchar(50), Display_Order int);
+END
+
+DECLARE @v_Emp_Id int,@v_CheckIn_Date DATE, @v_Prj_Id VARCHAR(4000),@v_MULTIPLE_PRJ CHAR(10), @v_Mode varchar(50),@v_Display_Order int;
+DECLARE CURSOR_ATTENDANCE CURSOR LOCAL FOR
+	
+	SELECT TBL.Emp_id,TBL.CheckIn_Date,TBL.Prj_Id,TBL.Mode,TBL.Display_Order
+	FROM
+	(
+		SELECT A.Emp_id,A.CheckIn_Date,	HR.fn_project_assign_id (A.Emp_id,GETDATE()-1) [Prj_Id], 'Yesterday CheckIn' Mode, 1 Display_Order
+		FROM HR.ATD_ATTENDANCE_MST A WITH(nolock)
+		INNER JOIN HR.HR_EMP_MST AS B WITH(nolock) ON A.Emp_id = B.Emp_id
+		WHERE 1=1
+		AND B.Emp_Type <> 19
+		AND B.Active = 1
+		AND A.CheckIn_Date = CAST(GETDATE()-1 AS date)
+		AND A.Status IN ('P', 'I', '', 'HP', 'W', 'L')
+		AND B.Emp_id NOT IN (1425, 3808)
+		UNION 
+		SELECT A.Emp_id,A.CheckIn_Date,	HR.fn_project_assign_id (A.Emp_id,GETDATE()-1) [Prj_Id], 'Yesterday CheckOut' Mode,2 Display_Order
+		FROM HR.ATD_ATTENDANCE_MST A WITH(nolock)
+		INNER JOIN HR.HR_EMP_MST AS B WITH(nolock) ON A.Emp_id = B.Emp_id
+		WHERE 1=1
+		AND B.Emp_Type <> 19
+		AND B.Active = 1
+		AND A.CheckOut_Date = CAST(GETDATE()-1 AS date)
+		AND A.Status IN ('P', 'I', '', 'HP', 'W', 'L')
+		AND B.Emp_id NOT IN (1425, 3808)
+		UNION
+		SELECT A.Emp_id,A.CheckIn_Date,	HR.fn_project_assign_id (A.Emp_id,GETDATE()-1) [Prj_Id], 'Today CheckIn' Mode,3 Display_Order
+		FROM HR.ATD_ATTENDANCE_MST A WITH(nolock)
+		INNER JOIN HR.HR_EMP_MST AS B WITH(nolock) ON A.Emp_id = B.Emp_id
+		WHERE 1=1
+		AND B.Emp_Type <> 19
+		AND B.Active = 1
+		AND A.CheckIn_Date = CAST(GETDATE() AS date)
+		AND A.Status IN ('P', 'I', '', 'HP', 'W', 'L')
+		AND B.Emp_id NOT IN (1425, 3808)
+	)TBL
+	ORDER BY TBL.Emp_id,TBL.CheckIn_Date,TBL.Prj_Id,TBL.Mode
+
+OPEN CURSOR_ATTENDANCE
+FETCH NEXT FROM CURSOR_ATTENDANCE INTO @v_Emp_Id , @v_CheckIn_Date,@v_Prj_Id, @v_Mode,@v_Display_Order;
+
+WHILE @@FETCH_STATUS = 0
+BEGIN
+
+	DECLARE @COUNT INT;
+	SET @COUNT=(SELECT COUNT(1) FROM  [HR].fn_SplitField((SELECT [HR].[FN_PROJECT_ASSIGN_ID](@v_Emp_Id, @v_CheckIn_Date)) ,',' ))
+	IF(@COUNT>1) 
+	BEGIN
+		SET @v_MULTIPLE_PRJ = (SELECT 'Yes' AS MULTIPLE_PRJ)
+	END
+	ELSE
+	BEGIN
+		SET @v_MULTIPLE_PRJ = (SELECT 'No' AS MULTIPLE_PRJ)
+	END
+
+	--SELECT @v_Emp_Id,@v_CheckIn_Date,IIF(@v_MULTIPLE_PRJ='Yes',0,@v_Prj_Id),@v_MULTIPLE_PRJ,@v_Mode
+
+	INSERT INTO #temp_checkin
+	(
+		Emp_Id,Loc_Name,CheckIn_Date,Prj_Id,MULTIPLE_PRJ,MODE,Display_Order
+	)
+	VALUES
+	(
+		@v_Emp_Id, [HR].[FN_USP_GET_COMMON]('EMP_LOCATION',@v_Emp_Id,0),@v_CheckIn_Date, 
+		IIF(@v_MULTIPLE_PRJ = 'Yes', 0, @v_Prj_Id), @v_MULTIPLE_PRJ, @v_Mode,@v_Display_Order
+	)
+
+	FETCH NEXT FROM CURSOR_ATTENDANCE INTO @v_Emp_Id , @v_CheckIn_Date,@v_Prj_Id,@v_Mode,@v_Display_Order;
+	END;
+
+CLOSE CURSOR_ATTENDANCE;
+DEALLOCATE CURSOR_ATTENDANCE;
+/*
+
+
+SELECT TBL.PRJ_NAME,TBL.LOC_NAME,TBL.EMP_CNT,TBL.CHECKIN_DATE,TBL.PRJ_ID,TBL.MULTIPLE_PRJ,TBL.MODE,TBL.DISPLAY_ORDER
+FROM
+ (
+	SELECT IIF(TCK.PRJ_ID=0,'MULTI PROJECT',PM.PRJ_NAME)PRJ_NAME,TCK.LOC_NAME,COUNT(TCK.EMP_ID)EMP_CNT,TCK.CHECKIN_DATE,TCK.PRJ_ID,
+	TCK.MULTIPLE_PRJ,TCK.MODE,TCK.DISPLAY_ORDER
+	FROM #TEMP_CHECKIN TCK
+	LEFT JOIN HR.PRJ_PROJECT_MST PM WITH(NOLOCK) ON  TCK.PRJ_ID=PM.PRJ_ID
+	WHERE TCK.PRJ_ID IS NOT NULL
+	GROUP BY TCK.CHECKIN_DATE,TCK.PRJ_ID,PM.PRJ_NAME,TCK.MULTIPLE_PRJ,TCK.MODE,TCK.LOC_NAME,TCK.DISPLAY_ORDER
+)TBL
+ORDER BY TBL.DISPLAY_ORDER, TBL.PRJ_NAME,TBL.LOC_NAME
+
+SELECT COUNT(*) as 'Yesterday CheckIn', PRJ_ID FROM #TEMP_CHECKIN
+WHERE MULTIPLE_PRJ='No'  AND loc_name='Agra' AND mode='Yesterday CheckIn'  -- 53
+GROUP BY PRJ_ID
+
+SELECT COUNT(*) AS 'Yesterday CheckOut' FROM #TEMP_CHECKIN
+WHERE MULTIPLE_PRJ='No'  AND loc_name='Agra' AND mode='Yesterday CheckOut' -- 40
+
+SELECT COUNT(*) AS 'Today CheckIn' FROM #TEMP_CHECKIN
+WHERE MULTIPLE_PRJ='No'  AND loc_name='Agra' AND mode='Today CheckIn' -- 31
+
+SELECT TBL.PRJ_ID,TBL.PRJ_NAME,TBL.LOC_NAME,TBL.MODE,TBL.TOTAL_CHECKIN_SINGLE_PROJECT,TBL.TOTAL_CHECKIN_MULTIPLE_PROJECT
+FROM 
+(
+	SELECT PM.PRJ_ID,PM.PRJ_NAME,TCK.LOC_NAME,TCK.MODE,COUNT(TCK.EMP_ID) [TOTAL_CHECKIN_SINGLE_PROJECT] ,0 [TOTAL_CHECKIN_MULTIPLE_PROJECT] 
+	FROM #TEMP_CHECKIN TCK
+	LEFT JOIN HR.PRJ_PROJECT_MST PM WITH(NOLOCK) ON  TCK.PRJ_ID=PM.PRJ_ID
+	WHERE MULTIPLE_PRJ='No' --AND loc_name='Agra' --AND mode='Yesterday CheckIn' -- 53
+	GROUP BY PM.PRJ_ID,PM.PRJ_NAME,TCK.LOC_NAME,TCK.MODE,TCK.Display_Order
+	ORDER BY PM.PRJ_NAME,TCK.LOC_NAME, TCK.Display_Order
+	UNION
+	SELECT 0 PRJ_ID,'Multiple Project' PRJ_NAME,TCK.LOC_NAME,TCK.MODE,0 [TOTAL_CHECKIN_SINGLE_PROJECT] ,COUNT(TCK.EMP_ID) [TOTAL_CHECKIN_MULTIPLE_PROJECT] 
+	FROM #TEMP_CHECKIN TCK
+	LEFT JOIN HR.PRJ_PROJECT_MST PM WITH(NOLOCK) ON  TCK.PRJ_ID=PM.PRJ_ID
+	WHERE MULTIPLE_PRJ='Yes'  AND loc_name='Agra' --AND mode='Yesterday CheckIn' -- 53
+	GROUP BY TCK.LOC_NAME,TCK.MODE
+)TBL
+ORDER BY TBL.PRJ_NAME
+
+--SELECT 387+20--407
+
+SELECT TBL.PRJ_ID,TBL.PRJ_NAME,TBL.LOC_NAME,TBL.MODE,TBL.TOTAL_EMP,TBL.Display_Order
+INTO #temp
+FROM 
+(
+	SELECT PM.PRJ_ID,PM.PRJ_NAME,TCK.LOC_NAME,TCK.MODE,COUNT(TCK.EMP_ID) [TOTAL_EMP] ,TCK.Display_Order
+	FROM #TEMP_CHECKIN TCK
+	LEFT JOIN HR.PRJ_PROJECT_MST PM WITH(NOLOCK) ON  TCK.PRJ_ID=PM.PRJ_ID
+	WHERE MULTIPLE_PRJ='No' 
+	GROUP BY PM.PRJ_ID,PM.PRJ_NAME,TCK.LOC_NAME,TCK.MODE,TCK.Display_Order
+	--ORDER BY PM.PRJ_NAME,TCK.LOC_NAME, TCK.Display_Order;
+	UNION
+	SELECT 0 PRJ_ID,'Multiple' PRJ_NAME,TCK.LOC_NAME,TCK.MODE,COUNT(TCK.EMP_ID) [TOTAL_EMP] ,TCK.Display_Order
+	FROM #TEMP_CHECKIN TCK
+	LEFT JOIN HR.PRJ_PROJECT_MST PM WITH(NOLOCK) ON  TCK.PRJ_ID=PM.PRJ_ID
+	WHERE MULTIPLE_PRJ='Yes' 
+	GROUP BY TCK.LOC_NAME,TCK.MODE,TCK.Display_Order
+)TBL
+ORDER BY TBL.PRJ_NAME,TBL.LOC_NAME,TBL.Display_Order;
+*/
+
+DECLARE @Body2 NVARCHAR(MAX)='';
+Declare @dt NVARCHAR(20);
+SET  @dt = REPLACE(CONVERT(CHAR(11), GETDATE(), 106),' ','-') 
+DECLARE @Delimiter Char(1);
+
+DECLARE @TotalYesterdayCheckIn VARCHAR(100);
+DECLARE @TotalYesterdayCheckOut VARCHAR(100);
+DECLARE @TotalTodayCheckIn VARCHAR(100);
+DECLARE @TOTAL_RECORDS VARCHAR(100);
+SELECT * INTO #Temp2 FROM (SELECT * from #TEMP_CHECKIN ) AS X;
+SET @TotalYesterdayCheckIn= (SELECT count(EMP_ID) FROM #Temp2 WHERE MODE='Yesterday CheckIn');
+SET @TotalYesterdayCheckOut= (SELECT count(EMP_ID) FROM #Temp2 WHERE MODE='Yesterday CheckOut');
+SET @TotalTodayCheckIn= (Select count(EMP_ID) from #Temp2 where MODE='Today CheckIn');
+--SELECT @TotalYesterdayCheckIn TotalYesterdayCheckIn,@TotalYesterdayCheckOut TotalYesterdayCheckOut,@TotalTodayCheckIn TotalTodayCheckIn;
+DROP table #Temp2
+
+DECLARE @Sub varchar(50)='Yesterday Attendance Report : '+(select @dt);
+ 
+DECLARE @Body1 nvarchar(max)='<table style="font-family:Arial;font-size:13px;line-height:1.5;width:700px">
+<tr><td>Hi, <br /><br />Please find attached file.<br /><br /></td></tr><tr><td colspann="2"><p><b>Yesterday CheckIn:</b> <span style="color:green"> <b> '+@TotalYesterdayCheckIn+'</b></span><br>
+<b>Yesterday CheckOut</b> <span style="color:red"> <b> '+@TotalYesterdayCheckOut+'</b></span><br><b>Today CheckIn:</b> <span style="color:green"> <b> '+@TotalTodayCheckIn+'</b></span><br></p></td></tr><tr><td>
+<table border="1" cellpadding="5" cellspacing="0" style="font-family:Arial;font-size:12px;width:490px;margin-bottom:10px;border: 1px solid #d0cfcf;text-align: center;">
+<tr style="font-weight:bold;background-color:#00bcd4;color: white;"><td>#</td><td>Status</td><td>Project</td><td>Location</td><td>Total Count</td></tr> ';
+
+DECLARE @X_PRJ_ID INT,@X_PRJ_NAME VARCHAR(500),@X_LOC_NAME VARCHAR(500),@X_MODE VARCHAR(50),@X_TOTAL_EMP INT,@X_Display_Order INT, @SERIALNO INT = 0;
+DECLARE CURSOR_ATTENDANCE_FETCH CURSOR LOCAL FOR
+
+	SELECT TBL.PRJ_ID,TBL.PRJ_NAME,TBL.LOC_NAME,TBL.MODE,TBL.TOTAL_EMP,TBL.Display_Order
+	FROM 
+	(
+		SELECT PM.PRJ_ID,PM.PRJ_NAME,TCK.LOC_NAME,TCK.MODE,COUNT(TCK.EMP_ID) [TOTAL_EMP] ,TCK.Display_Order
+		FROM #TEMP_CHECKIN TCK
+		LEFT JOIN HR.PRJ_PROJECT_MST PM WITH(NOLOCK) ON  TCK.PRJ_ID=PM.PRJ_ID
+		WHERE MULTIPLE_PRJ='No' 
+		GROUP BY PM.PRJ_ID,PM.PRJ_NAME,TCK.LOC_NAME,TCK.MODE,TCK.Display_Order
+		--ORDER BY PM.PRJ_NAME,TCK.LOC_NAME, TCK.Display_Order;
+		UNION
+		SELECT 0 PRJ_ID,'Multiple' PRJ_NAME,TCK.LOC_NAME,TCK.MODE,COUNT(TCK.EMP_ID) [TOTAL_EMP] ,TCK.Display_Order
+		FROM #TEMP_CHECKIN TCK
+		LEFT JOIN HR.PRJ_PROJECT_MST PM WITH(NOLOCK) ON  TCK.PRJ_ID=PM.PRJ_ID
+		WHERE MULTIPLE_PRJ='Yes' 
+		GROUP BY TCK.LOC_NAME,TCK.MODE,TCK.Display_Order
+	)TBL
+	ORDER BY TBL.LOC_NAME,TBL.PRJ_NAME,TBL.Display_Order;    
+  
+OPEN CURSOR_ATTENDANCE_FETCH
+FETCH NEXT FROM CURSOR_ATTENDANCE_FETCH INTO @X_PRJ_ID ,@X_PRJ_NAME ,@X_LOC_NAME ,@X_MODE ,@X_TOTAL_EMP ,@X_Display_Order;   
+  
+WHILE @@FETCH_STATUS = 0    
+BEGIN    
+   SET @SERIALNO = @SERIALNO+1;
+   SELECT @SERIALNO  AS SERIALNO
+   IF @X_MODE='Yesterday CheckIn'
+   BEGIN
+		SET @Body2=@Body2 + '<tr style="font-weight:bold;"><td>'+CONVERT(VARCHAR,@SERIALNO)+'</td><td style="color:Green">'+CONVERT(VARCHAR,@X_MODE)+'</td><td>'+CONVERT(VARCHAR,@X_PRJ_NAME)+'</td><td>'+CONVERT(VARCHAR,@X_LOC_NAME)+'</td><td>'+CONVERT(VARCHAR,@X_TOTAL_EMP)+'</td></tr>';  
+   END
+   ELSE IF @X_MODE='Yesterday CheckOut'
+   BEGIN
+		SET @Body2=@Body2 + '<tr style="font-weight:bold;"><td>'+CONVERT(VARCHAR,@SERIALNO)+'</td><td style="color:Green">'+CONVERT(VARCHAR,@X_MODE)+'</td><td>'+CONVERT(VARCHAR,@X_PRJ_NAME)+'</td><td>'+CONVERT(VARCHAR,@X_LOC_NAME)+'</td><td>'+CONVERT(VARCHAR,@X_TOTAL_EMP)+'</td></tr>'; 
+   END
+   ELSE IF @X_MODE='Today CheckIn'
+   BEGIN 
+		SET @Body2=@Body2 + '<tr style="font-weight:bold;"><td>'+CONVERT(VARCHAR,@SERIALNO)+'</td><td style="color:Green">'+CONVERT(VARCHAR,@X_MODE)+'</td><td>'+CONVERT(VARCHAR,@X_PRJ_NAME)+'</td><td>'+CONVERT(VARCHAR,@X_LOC_NAME)+'</td><td>'+CONVERT(VARCHAR,@X_TOTAL_EMP)+'</td></tr>'; 
+   END
+  
+FETCH NEXT FROM CURSOR_ATTENDANCE_FETCH INTO @X_PRJ_ID ,@X_PRJ_NAME ,@X_LOC_NAME ,@X_MODE ,@X_TOTAL_EMP ,@X_Display_Order;    
+   
+END     
+CLOSE CURSOR_ATTENDANCE_FETCH;    
+DEALLOCATE CURSOR_ATTENDANCE_FETCH; 
+
+DECLARE @Body3 nvarchar(max)='</table></td></tr><tr><td><b>Thanks & Regards,<br />Inventia Technology Team</b></td></tr></table>'
+Declare @Body nvarchar(max)=@Body1+@Body2+@Body3;
+PRINT @Body;
+ 
+SET @Delimiter = CHAR(9);
+ 
+EXEC msdb.dbo.sp_send_dbmail
+@profile_name = 'attandance_inventive_mail',
+@recipients='sunil.kumar@inventia.in',
+--@recipients='hrd@insolutions.in;devesh.garg@gmail.com;varun@inventia.in;shailendra@inventia.in;anshul.a@insolutions.in;@megha',
+ 
+@subject =@sub,
+@body =@Body,
+@body_format = 'HTML',
+@execute_query_database = 'HR_INVENTIVE',
+@query = 'set nocount on; select * from HR.TODAY_EMPLOYEE_ATTENDANCE_NEW ORDER BY STATUS DESC, name ASC',
+@query_result_separator =@Delimiter ,
+@query_result_width = 32767,
+@query_result_no_padding = 1,
+@Attach_Query_Result_As_File = 1,
+@Query_Result_Header = 1,
+@Query_Attachment_Filename = 'AttendanceAuditProjectwise.csv'
+
+
+

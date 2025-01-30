@@ -1,0 +1,20 @@
+Cannot generate PDF: Exit with code 1 due to network error: ConnectionRefusedError (exit code: 1)
+Cannot generate PDF: Exit with code 1 due to network error: ConnectionRefusedError (exit code: 1)
+Could not find stored procedure 'HR.USP_GET_LOAD CONSUMERS_10TO49_PRINT'.
+D:\SVN Code\HRMS\HRMS\HRMS\Areas\Project\Views\Load_Consumers_49HP_KVA_KW\_PrintPdf_LoadConsumers.cshtml(47): error CS1061: 'Load_Consumers_49HP_KVA_KW_Print_Model' does not contain a definition for 'RATE' and no extension method 'RATE' accepting a first argument of type 'Load_Consumers_49HP_KVA_KW_Print_Model' could be found (are you missing a using directive or an assembly reference?)
+Invalid object name 'HR.PRJ_INVOICE_LOAD CONSUMERS_10TO49_HP_HDR'.
+D:\SVN Code\HRMS\HRMS\HRMS\Areas\Project\Views\Load_Consumers_49HP_KVA_KW\_PrintPdf_LoadConsumers.cshtml(22): error CS1061: 'Load_Consumers_49HP_KVA_KW_Print_Model' does not contain a definition for 'HIERARCHY_DESC' and no extension method 'HIERARCHY_DESC' accepting a first argument of type 'Load_Consumers_49HP_KVA_KW_Print_Model' could be found (are you missing a using directive or an assembly reference?)
+D:\SVN Code\HRMS\HRMS\HRMS\Areas\Project\Views\Load_Consumers_49HP_KVA_KW\_PrintPdf_LoadConsumers.cshtml(22): error CS1061: 'Load_Consumers_49HP_KVA_KW_Print_Model' does not contain a definition for 'HIERARCHY_DESC' and no extension method 'HIERARCHY_DESC' accepting a first argument of type 'Load_Consumers_49HP_KVA_KW_Print_Model' could be found (are you missing a using directive or an assembly reference?)
+D:\SVN Code\HRMS\HRMS\HRMS\Areas\Project\Views\Load_Consumers_49HP_KVA_KW\_PrintPdf_LoadConsumers.cshtml(22): error CS1061: 'Load_Consumers_49HP_KVA_KW_Print_Model' does not contain a definition for 'HIERARCHY_DESC' and no extension method 'HIERARCHY_DESC' accepting a first argument of type 'Load_Consumers_49HP_KVA_KW_Print_Model' could be found (are you missing a using directive or an assembly reference?)
+D:\SVN Code\HRMS\HRMS\HRMS\Areas\Project\Views\Load_Consumers_49HP_KVA_KW\_PrintPdf_LoadConsumers.cshtml(22): error CS1061: 'Load_Consumers_49HP_KVA_KW_Print_Model' does not contain a definition for 'HIERARCHY_DESC' and no extension method 'HIERARCHY_DESC' accepting a first argument of type 'Load_Consumers_49HP_KVA_KW_Print_Model' could be found (are you missing a using directive or an assembly reference?)
+Cannot generate PDF: Exit with code 1 due to network error: ConnectionRefusedError (exit code: 1)
+Cannot generate PDF: Exit with code 1 due to network error: ConnectionRefusedError (exit code: 1)
+Cannot generate PDF: Exit with code 1 due to network error: ConnectionRefusedError (exit code: 1)
+Cannot generate PDF: Exit with code 1 due to network error: ConnectionRefusedError (exit code: 1)
+Cannot generate PDF: Exit with code 1 due to network error: ConnectionRefusedError (exit code: 1)
+Cannot generate PDF: Exit with code 1 due to network error: ConnectionRefusedError (exit code: 1)
+The code block is missing a closing "}" character.  Make sure you have a matching "}" character for all the "{" characters within this block, and that none of the "}" characters are being interpreted as markup.
+
+The code block is missing a closing "}" character.  Make sure you have a matching "}" character for all the "{" characters within this block, and that none of the "}" characters are being interpreted as markup.
+
+D:\SVN Code\HRMS\HRMS\HRMS\Areas\Project\Views\Load_Consumers_49HP_KVA_KW\_PrintPdf_LoadConsumers.cshtml(239): error CS1061: 'Load_Consumers_49HP_KVA_KW_Print_Model' does not contain a definition for 'BillPrinting15kw' and no extension method 'BillPrinting15kw' accepting a first argument of type 'Load_Consumers_49HP_KVA_KW_Print_Model' could be found (are you missing a using directive or an assembly reference?)

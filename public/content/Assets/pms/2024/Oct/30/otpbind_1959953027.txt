@@ -1,0 +1,267 @@
+#region Forgot Password             
+[HttpPost]
+[Route("ForgotPassword")]
+public HttpResponseMessage ForgotPassword(ForgotPasswordModel model)
+{
+    ForgotPasswordResponse response = new ForgotPasswordResponse();
+    try
+    {
+        string otp = GetRandomKey(6);
+        //model.Password = ClsEncryption.EncryptionData(model.Password);
+        model.OTP = otp;
+        response = auth.ForgotPassword(model);
+        if (response.Status)
+        {
+            bool result = OtpBind(model.LoginId, otp);
+            if (result == true)
+            {
+                return Request.CreateResponse(response);
+            }
+        }
+    }
+    catch (Exception ex)
+    {
+        logger.Error(ex.Message);//return error message
+    }
+    return new HttpResponseMessage()
+    {
+        Content = new StringContent(JsonConvert.SerializeObject(response), Encoding.UTF8, "application/json")
+    };
+
+}
+#endregion
+
+public static string GetRandomKey(int len)
+{
+    int maxSize = len;
+    char[] chars = new char[30];
+    string a;
+    a = "1234567890";
+    chars = a.ToCharArray();
+    int size = maxSize;
+    byte[] data = new byte[1];
+    RNGCryptoServiceProvider crypto = new RNGCryptoServiceProvider();
+    crypto.GetNonZeroBytes(data);
+    size = maxSize;
+    data = new byte[size];
+    crypto.GetNonZeroBytes(data);
+    StringBuilder result = new StringBuilder(size);
+    foreach (byte b in data) { result.Append(chars[b % (chars.Length)]); }
+    return result.ToString();
+}
+
+//interface
+ForgotPasswordResponse ForgotPassword(ForgotPasswordModel Model);
+
+//repository
+public ForgotPasswordResponse ForgotPassword(ForgotPasswordModel Model)
+{
+    ForgotPasswordResponse response = new ForgotPasswordResponse();
+    try
+    {
+        var parameter = new DynamicParameters();
+        parameter.Add("@Flag", Model.Flag);
+        parameter.Add("@LoginId", Model.LoginId);
+        parameter.Add("@OTP", Model.OTP);
+        parameter.Add("@NewPassword", Model.NewPassword);
+        parameter.Add("@ConfirmPassword", Model.ConfirmPassword);                
+        response = _db.Query<ForgotPasswordResponse>("[" + DomainURL + "].[Sp_ResetPasswordByOTP]", parameter, commandType: CommandType.StoredProcedure).First();
+    }
+    catch (Exception ex) { }
+    return response;
+}
+
+#region OTP Bind By ID 
+private bool OtpBind(string resetId, string otp)
+{
+    bool res = false;
+    try
+    {
+        ForgotPasswordModel model = new ForgotPasswordModel();
+        ForgotPasswordData response = new ForgotPasswordData();
+        model.LoginId = resetId;
+        model.OTP = otp;
+        model.Flag = "E";                
+        response = auth.ForgotPasswordData(model);
+        string heading = string.Empty;
+        string title = string.Empty;
+        heading = "Your OTP:";
+        title = otp;
+        string template_id = response.TEMPLATE_ID;
+        string lang = "";
+        string type = "ForgotPassword";
+        if (response.EmailId != "")
+        {
+            Task.Run(() => OTPMail(heading, title, response.EmailId, response.ATTRIBUTE1));
+            if (response.Mobile != "")
+            {
+                Task.Run(() => OTPSMS(response.Mobile, title, template_id, lang, type));
+            }
+            res = true;                    
+        }
+        return res;
+
+    }
+    catch (Exception ex)
+    {
+        logger.Error(ex.Message);
+        throw ex;
+    }
+    return res;
+}
+#endregion
+
+
+////interface
+ForgotPasswordData ForgotPasswordData(ForgotPasswordModel Model);
+
+
+//repository
+public ForgotPasswordData ForgotPasswordData(ForgotPasswordModel Model)
+{
+    ForgotPasswordData response = new ForgotPasswordData();
+    try
+    {
+        var parameter = new DynamicParameters();
+        parameter.Add("@Flag", Model.Flag);
+        parameter.Add("@LoginId", Model.LoginId);
+        parameter.Add("@OTP", Model.OTP);
+        parameter.Add("@NewPassword", Model.NewPassword);
+        parameter.Add("@ConfirmPassword", Model.ConfirmPassword);
+        response = _db.Query<ForgotPasswordData>("[" + DomainURL + "].[Sp_ResetPasswordByOTP]", parameter, commandType: CommandType.StoredProcedure).First();
+    }
+    catch (Exception ex) { }
+    return response;
+}
+
+
+#region Send OTP notify as SMS
+private void OTPSMS(string mobile, string OTP, string template_id, string lang, string type)
+{
+    if (!string.IsNullOrEmpty(mobile))
+    {
+        if (type == "ForgotPassword") {
+            string msg = OTP + " is your OTP for changing your password. Valid for 3 minutes. ISSPL";
+            string SendStatus = CustomUtility.SendSms(mobile, msg, "1007540048627133501", lang);
+        }
+        else
+        {
+            string SendStatus = CustomUtility.SendSms(mobile, "Your OTP: " + OTP + " use this OTP valid upto 24 hours only.", template_id, lang);
+        }
+    }
+}
+#endregion
+
+
+private static string AuthKey = ConfigurationManager.AppSettings["AuthKey"].ToString();
+private static string SenderId = ConfigurationManager.AppSettings["SenderId"].ToString();
+public static string GetAppSetting(string key)
+{
+    return ConfigurationManager.AppSettings[key];
+}
+public static string SendSms(string numbers, string message, string template_id,string lang = "")
+{            
+    string result = string.Empty;
+    if (CustomUtility.GetAppSetting("IsSmsSend").Equals("Y"))
+    {
+        string mType = (lang.ToLower() == "hindi" ? "L" : "N");
+        //string url = "https://vsms.minavo.in/api/singlesms.php?auth_key=" + AuthKey + "&mobilenumber=" + numbers + "&message=" + message + "&sid=" + SenderId + "&mtype=" + mType + "";
+        string url = "http://nimbusit.info/api/pushsms.php?user=t5insolutions&entityid=1001490989074107334&key=" + AuthKey + "&mobile=" + numbers + "&text=" + message + "&sender=" + SenderId + "&templateid=" + template_id + "";
+        //refer to parameters to complete correct url string
+
+        StreamWriter myWriter = null;
+        HttpWebRequest objRequest = (HttpWebRequest)WebRequest.Create(url);
+
+        objRequest.Method = "POST";
+        objRequest.ContentLength = Encoding.UTF8.GetByteCount(url);
+        objRequest.ContentType = "application/x-www-form-urlencoded";
+        try
+        {
+            myWriter = new StreamWriter(objRequest.GetRequestStream());
+            myWriter.Write(url);
+        }
+        catch (Exception e)
+        {
+            return e.Message;
+        }
+        finally
+        {
+            myWriter.Close();
+        }
+
+        HttpWebResponse objResponse = (HttpWebResponse)objRequest.GetResponse();
+        using (StreamReader sr = new StreamReader(objResponse.GetResponseStream()))
+        {
+            result = sr.ReadToEnd();
+            // Close and clean up the StreamReader
+            string res = result.Trim().Replace("-", "");
+            string[] subs = res.Split(',');
+            if (subs[0] == "100")
+            {
+                result = "true";
+            }
+            else
+            {
+                result = "false";
+            }
+            sr.Close();
+        }
+    }
+    return result;
+}
+
+
+
+#region Verify Otp   
+/// <summary>
+/// Verify Otp 
+/// </summary>
+/// <param name="Model"></param>
+/// <returns></returns>
+[HttpPost]
+[Route("VerifyOtp")]
+public HttpResponseMessage VerifyOtp(ForgotPasswordModel model)
+{
+    ForgotPasswordResponse response = new ForgotPasswordResponse();
+    try
+    {               
+        response = auth.ForgotPassword(model);
+        if (response.Status)
+        {
+            return Request.CreateResponse(response);
+        }
+    }
+    catch (Exception ex)
+    {
+        logger.Error(ex.Message);//return error message
+    }
+    return new HttpResponseMessage()
+    {
+        Content = new StringContent(JsonConvert.SerializeObject(response), Encoding.UTF8, "application/json")
+    };
+
+}
+#endregion
+
+
+//interface
+ForgotPasswordResponse ForgotPassword(ForgotPasswordModel Model);
+
+//repository
+public ForgotPasswordResponse ForgotPassword(ForgotPasswordModel Model)
+{
+    ForgotPasswordResponse response = new ForgotPasswordResponse();
+    try
+    {
+        var parameter = new DynamicParameters();
+        parameter.Add("@Flag", Model.Flag);
+        parameter.Add("@LoginId", Model.LoginId);
+        parameter.Add("@OTP", Model.OTP);
+        parameter.Add("@NewPassword", Model.NewPassword);
+        parameter.Add("@ConfirmPassword", Model.ConfirmPassword);                
+        response = _db.Query<ForgotPasswordResponse>("[" + DomainURL + "].[Sp_ResetPasswordByOTP]", parameter, commandType: CommandType.StoredProcedure).First();
+    }
+    catch (Exception ex) { }
+    return response;
+}
+

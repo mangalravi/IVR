@@ -1,0 +1,192 @@
+﻿<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Invice Letter Generation : PDF</title>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <meta content="" name="description" />
+    <meta content="" name="author" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <style>
+      @page {
+        size: A4;
+        margin: 5mm 5mm 5mm 5mm;
+        page-break-inside: avoid;
+      }
+
+      body {
+        font-family: Calibri, sans-serif;
+        -webkit-print-color-adjust: exact;
+      }
+
+      .ILGWrap {
+        width: 100%;
+        display: block;
+        font-family: Calibri, sans-serif;
+        -webkit-print-color-adjust: exact;
+        border-collapse: collapse;
+        line-height: 1.5;
+      }
+
+      .tblHdr {
+        width: 100%;
+        font-family: Calibri, sans-serif;
+        -webkit-print-color-adjust: exact;
+        margin-bottom: 1cm;
+        vertical-align: top;
+        border-collapse: collapse;
+      }
+
+      .tblHdr tr td {
+        padding-bottom: 0.65cm;
+        border-bottom: 1px solid #bfbfbf;
+      }
+
+      .tblHdr tr td.srcPrvdr {
+        width: 2.35cm;
+        max-width: 2.35cm;
+      }
+
+      .tblHdr tr td.srcPrvdr img {
+        width: 2.35cm;
+        max-width: 2.35cm;
+      }
+
+      .tblHdr tr td.srsDtl {
+        text-align: center;
+      }
+
+      .toDesgn {
+        font-size: 16pt;
+        font-weight: bold;
+      }
+
+      .dsgAdrs {
+        font-size: 16pt;
+        font-weight: bold;
+      }
+
+      .srsName {
+        font-size: 16pt;
+        font-weight: bold;
+      }
+
+      .tblWBR {
+        width: 100%;
+        font-family: Calibri, sans-serif;
+        -webkit-print-color-adjust: exact;
+        margin-bottom: 0.5cm;
+        vertical-align: top;
+        border-collapse: collapse;
+      }
+
+      .tblWBR tr td {
+        font-size: 12.5pt;
+        border: 0;
+      }
+
+      .txtRight {
+        text-align: right;
+      }
+
+      .mbc {
+        margin-bottom: 0.5cm;
+      }
+
+      .toMssg {
+        font-size: 12.5pt;
+        margin-bottom: 1.5cm;
+        margin-top: 2cm;
+      }
+
+      .msgTitle {
+        font-size: 13.5pt;
+        margin-bottom: 1cm;
+        font-weight: bold;
+        text-decoration: underline;
+      }
+
+      .msgDsc {
+        font-size: 12.5pt;
+        margin-bottom: 0.5cm;
+      }
+
+      .tblBR {
+        width: 100%;
+        font-family: Calibri, sans-serif;
+        -webkit-print-color-adjust: exact;
+        border-collapse: collapse;
+        margin-bottom: 1cm;
+      }
+
+      .tblBR tr th,
+      .tblBR tr td {
+        border: 1px solid #bfbfbf;
+        padding: 0.15cm 0.275cm;
+        vertical-align: middle;
+        font-size: 12.5pt;
+        text-align: left;
+      }
+
+      .tblBR tr th {
+        background: #e0e1e3;
+        font-weight: normal;
+        white-space: nowrap;
+      }
+
+      .cmnTxt {
+        font-size: 12.5pt;
+        margin-bottom: 1.5cm;
+      }
+
+      .btmtbl {
+        width: 100%;
+        font-family: Calibri, sans-serif;
+        -webkit-print-color-adjust: exact;
+        border-collapse: collapse;
+      }
+
+      .btmtbl tr td {
+        border: 0;
+      }
+
+      .btmtbl tr td.tcwd {
+        max-width: 6cm;
+        width: 6cm;
+      }
+      .btmtbl tr td.tcwd1 {
+        max-width: 8cm;
+        width: 8cm;
+      }
+
+      .frmSgn {
+        font-size: 12.5pt;
+        font-weight: bold;
+        text-align: center;
+      }
+      .letterHeadBG {
+        width: 100%;
+        margin-top: 0.5cm;
+      }
+
+      .letterHeadBGFoot {
+        width: 100%;
+        margin-bottom: 0.5cm;
+      }
+      .fstLne {
+        margin-top: 1.15cm;
+      }
+      .tblBR.wswp tr th {
+        background: #e0e1e3;
+        font-weight: bold;
+        white-space: normal;
+      }
+    </style>
+  </head>
+  <body>
+    <div className="main">Report-Content</div>
+  </body>
+</html>
